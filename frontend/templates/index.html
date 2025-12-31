@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Skill-Based Job Recommendations</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Skill-Based Job Recommendations</h1>
+    <p>Enter your skills and total experience (years)</p>
+
+    <div class="form-row">
+        <input id="skillsInput" placeholder="Python, SQL">
+        <input id="expInput" type="number" placeholder="Experience">
+        <button onclick="getRecommendations()">Get Recommendations</button>
+    </div>
+
+    <div id="error" class="error"></div>
+    <div id="results"></div>
+
+    <hr>
+
+    <h2>AI Career Advisor</h2>
+    <p>Ask what skills are required for a role</p>
+
+    <div class="form-row">
+        <select id="targetRole">
+            <option value="">Select role</option>
+            <option>Frontend Developer</option>
+            <option>Backend Developer</option>
+            <option>Full Stack Developer</option>
+            <option>Data Analyst</option>
+            <option>ML Engineer</option>
+            <option>Cloud Engineer</option>
+        </select>
+        <button onclick="askAI()">Ask AI</button>
+    </div>
+
+    <pre id="aiResult" class="ai-box"></pre>
+</div>
+
+<script>
+async function getRecommendations() {
+    const skills = document.getElementById("skillsInput").value;
+    const experience = document.getElementById("expInput").value;
+    const resultsDiv = document.getElementById("results");
+    const errorDiv = document.getElementById("error");
+
+    resultsDiv.innerHTML = "";
+    errorDiv.innerText = "";
+
+    try {
+        const res = await fetch("/recommend-by-skills", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                skills: skills,
+                experience: Number(experience)
+            })
+        });
+
+        const data = await res.json();
+        const jobs = data.recommendations || [];
+
+        if (jobs.length === 0) {
+            resultsDiv.innerHTML = "<p>No matching jobs found.</p>";
+            return;
+        }
+
+        jobs.forEach(job => {
+            const div = document.createElement("div");
+            div.className = "job-card";
+            div.innerHTML = `
+                <h3>${job.title}</h3>
+                <p><b>Matched skills:</b> ${job.matched_skills.join(", ")}</p>
+                <p><b>Score:</b> ${job.score}</p>
+                <p><b>Min Experience:</b> ${job.min_experience} yrs</p>
+            `;
+            resultsDiv.appendChild(div);
+        });
+
+    } catch (err) {
+        errorDiv.innerText = "Backend not reachable.";
+    }
+}
+
+async function askAI() {
+    const role = document.getElementById("targetRole").value;
+    const output = document.getElementById("aiResult");
+    output.innerText = "";
+
+    if (!role) {
+        output.innerText = "Please select a role.";
+        return;
+    }
+
+    try {
+        const res = await fetch("/career-advice", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ role: role })
+        });
+
+        const data = await res.json();
+
+        if (data.advice) {
+            output.innerText = data.advice;
+        } else if (data.error) {
+            output.innerText = data.error;
+        } else {
+            output.innerText = JSON.stringify(data, null, 2);
+        }
+
+    } catch (err) {
+        output.innerText = "AI service unavailable.";
+    }
+}
+</script>
+
+</body>
+</html>
