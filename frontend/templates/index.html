@@ -8,11 +8,15 @@
 <body>
 
 <div class="container">
+
+    <!-- ========================= -->
+    <!-- JOB RECOMMENDATION SECTION -->
+    <!-- ========================= -->
     <h1>Skill-Based Job Recommendations</h1>
     <p>Enter your skills and total experience (years)</p>
 
     <div class="form-row">
-        <input id="skillsInput" placeholder="Python, SQL">
+        <input id="skillsInput" placeholder="Python, SQL, Docker">
         <input id="expInput" type="number" placeholder="Experience">
         <button onclick="getRecommendations()">Get Recommendations</button>
     </div>
@@ -22,11 +26,14 @@
 
     <hr>
 
+    <!-- ========================= -->
+    <!-- AI CAREER ADVISOR SECTION -->
+    <!-- ========================= -->
     <h2>AI Career Advisor</h2>
     <p>Ask what skills are required for a role</p>
 
     <div class="form-row">
-        <select id="targetRole">
+        <select id="roleSelect">
             <option value="">Select role</option>
             <option>Frontend Developer</option>
             <option>Backend Developer</option>
@@ -34,14 +41,26 @@
             <option>Data Analyst</option>
             <option>ML Engineer</option>
             <option>Cloud Engineer</option>
+            <option value="OTHER">Other (Custom Role)</option>
         </select>
         <button onclick="askAI()">Ask AI</button>
     </div>
 
+    <input
+        type="text"
+        id="customRoleInput"
+        placeholder="e.g. MLOps Engineer, FinOps, Prompt Engineer"
+        style="display:none; width:100%; margin-top:10px;"
+    />
+
     <pre id="aiResult" class="ai-box"></pre>
+
 </div>
 
 <script>
+/* =========================
+   JOB RECOMMENDATION LOGIC
+========================= */
 async function getRecommendations() {
     const skills = document.getElementById("skillsInput").value;
     const experience = document.getElementById("expInput").value;
@@ -86,9 +105,24 @@ async function getRecommendations() {
     }
 }
 
+/* =========================
+   AI CAREER ADVISOR LOGIC
+========================= */
+document.getElementById("roleSelect").addEventListener("change", function () {
+    const customInput = document.getElementById("customRoleInput");
+    if (this.value === "OTHER") {
+        customInput.style.display = "block";
+    } else {
+        customInput.style.display = "none";
+        customInput.value = "";
+    }
+});
+
 async function askAI() {
-    const role = document.getElementById("targetRole").value;
+    const role = document.getElementById("roleSelect").value;
+    const customRole = document.getElementById("customRoleInput").value;
     const output = document.getElementById("aiResult");
+
     output.innerText = "";
 
     if (!role) {
@@ -96,21 +130,24 @@ async function askAI() {
         return;
     }
 
+    output.innerText = "Thinking...";
+
     try {
         const res = await fetch("/career-advice", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ role: role })
+            body: JSON.stringify({
+                role: role,
+                custom_role: customRole
+            })
         });
 
         const data = await res.json();
 
         if (data.advice) {
             output.innerText = data.advice;
-        } else if (data.error) {
-            output.innerText = data.error;
         } else {
-            output.innerText = JSON.stringify(data, null, 2);
+            output.innerText = data.error || "AI service unavailable.";
         }
 
     } catch (err) {

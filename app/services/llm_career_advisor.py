@@ -1,35 +1,61 @@
 import os
+import requests
 from dotenv import load_dotenv
-from groq import Groq
 
 load_dotenv()
 
-def get_career_advice(role: str) -> str:
-    api_key = os.getenv("GROQ_API_KEY")
+HF_TOKEN = os.getenv("HF_API_TOKEN")
 
-    if not api_key:
-        return "Groq API key not configured."
+HF_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+HF_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
 
-    client = Groq(api_key=api_key)
+HEADERS = {
+    "Authorization": f"Bearer {HF_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+def get_career_advice(target_role: str):
+    if not HF_TOKEN:
+        return {"error": "Hugging Face API token not configured."}
+
+    prompt = f"""
+You are a career advisor for a tech company.
+
+Explain for the role: {target_role}
+
+1. Core skills required
+2. Nice-to-have skills
+3. What beginners should focus on first
+4. Common mistakes candidates make
+
+Keep the answer concise and structured.
+"""
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 300,
+            "temperature": 0.4
+        }
+    }
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a professional career advisor."
-                },
-                {
-                    "role": "user",
-                    "content": f"List core skills required for a {role}. Bullet points only."
-                }
-            ],
-            temperature=0.3,
-            max_tokens=300
+        response = requests.post(
+            HF_URL,
+            headers=HEADERS,
+            json=payload,
+            timeout=60
         )
 
-        return response.choices[0].message.content.strip()
+        if response.status_code != 200:
+            return {"error": response.text}
+
+        data = response.json()
+
+        if isinstance(data, list) and "generated_text" in data[0]:
+            return {"advice": data[0]["generated_text"]}
+
+        return {"error": "Unexpected AI response format."}
 
     except Exception as e:
-        return f"LLM error: {str(e)}"
+        return {"error": str(e)}

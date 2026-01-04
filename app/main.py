@@ -7,6 +7,7 @@ from app.routes.recommend import recommend_bp
 from app.routes.career_advisor import career_bp
 
 def create_app():
+    # ✅ LOAD .env FIRST
     load_dotenv()
 
     app = Flask(
@@ -15,6 +16,7 @@ def create_app():
         static_folder="../frontend/static"
     )
 
+    # Optional debug check (keep for now)
     print("HF_API_TOKEN:", os.getenv("HF_API_TOKEN"))
 
     app.register_blueprint(health_bp)
@@ -26,7 +28,3 @@ def create_app():
         return render_template("index.html")
 
     return app
-
-
-# 🔥 THIS LINE IS REQUIRED FOR GUNICORN
-app = create_app()

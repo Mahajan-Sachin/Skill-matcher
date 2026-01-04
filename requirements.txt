@@ -3,7 +3,3 @@ flasgger
 mysql-connector-python
 python-dotenv
 huggingface-hub
-gunicorn
-groq
-requests
-python-dotenv
