@@ -1,5 +1,8 @@
 Flask
-flasgger
 mysql-connector-python
 python-dotenv
+httpx
 huggingface-hub
+flasgger
+gunicorn
+
