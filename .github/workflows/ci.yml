@@ -1,4 +1,4 @@
-name: Backend CI
+name: Django CI
 
 on:
   push:
@@ -10,22 +10,67 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # ── Spin up a real PostgreSQL in CI ──────────────────
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skill_recommender
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    # ── Environment variables for Django ─────────────────
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: skill_recommender
+      GROQ_API_KEY: dummy-ci-key-not-used-in-tests
+      DJANGO_SETTINGS_MODULE: config.settings
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run basic app check
+      - name: Django system check
+        run: python manage.py check
+
+      - name: Run migrations
+        run: python manage.py migrate
+
+      - name: Seed database
+        run: python manage.py seed_db
+
+      - name: Verify DB has data
         run: |
-          python - <<EOF
-          print("CI check passed")
-          EOF
+          python manage.py shell -c "
+          from recommender.models import Job, Skill
+          assert Skill.objects.count() > 0, 'No skills seeded!'
+          assert Job.objects.count() > 0, 'No jobs seeded!'
+          print(f'✅ DB OK: {Skill.objects.count()} skills, {Job.objects.count()} jobs')
+          "
