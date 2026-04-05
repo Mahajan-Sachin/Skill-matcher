@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Django
+*.sqlite3
+db.sqlite3
+staticfiles/
+
+# Environment
+.env
+*.env
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Git
+.git/
+.gitignore
+
+# Temporary files
+*.log
+*.tmp
+create_db.py

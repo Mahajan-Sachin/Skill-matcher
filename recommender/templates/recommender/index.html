@@ -1,0 +1,368 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Recommendation Engine</title>
+    <meta name="description" content="AI-powered skill-based job recommendation and career advisor tool.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'recommender/style.css' %}">
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">🎯</span>
+                <span class="logo-text">SkillMatch</span>
+            </div>
+            <div class="header-right">
+                <div id="metricsBar" class="metrics-bar">
+                    <span class="metric-pill" id="metricJobs">— jobs</span>
+                    <span class="metric-pill" id="metricSkills">— skills</span>
+                    <span class="metric-pill" id="metricDb">DB —ms</span>
+                </div>
+                <span class="badge">AI-Powered</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- RESUME UPLOAD -->
+        <section class="card" id="resume-section">
+            <div class="card-header">
+                <h2>📄 Upload Your Resume</h2>
+                <p class="subtitle">Auto-extract skills and calculate total experience from your work history.</p>
+            </div>
+            <div class="form-row">
+                <div class="input-group">
+                    <label for="resumeFile">Resume (PDF or Word)</label>
+                    <div class="file-input-wrap">
+                        <input type="file" id="resumeFile" accept=".pdf,.docx">
+                        <label for="resumeFile" class="file-label" id="fileLabel">
+                            <span class="file-icon">📁</span>
+                            <span id="fileLabelText">Choose PDF or Word file...</span>
+                        </label>
+                    </div>
+                </div>
+                <button id="parseBtn" onclick="parseResume()">
+                    <span class="btn-text">Extract from Resume</span>
+                    <span class="btn-loader" style="display:none;">Analyzing...</span>
+                </button>
+            </div>
+            <div id="resumeError" class="error-msg" style="display:none;"></div>
+            <div id="resumeResult" style="display:none;"></div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- JOB RECOMMENDATIONS -->
+        <section class="card" id="recommend-section">
+            <div class="card-header">
+                <div class="section-title-row">
+                    <div>
+                        <h1>Find Jobs That Match Your Skills</h1>
+                        <p class="subtitle">Get ranked recommendations with skill gap analysis.</p>
+                    </div>
+                    <div id="latencyBadge" class="latency-badge" style="display:none;">
+                        ⚡ <span id="latencyMs">0</span>ms
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="input-group">
+                    <label for="skillsInput">Your Skills</label>
+                    <input id="skillsInput" type="text" placeholder="e.g. Python, SQL, Docker">
+                </div>
+                <div class="input-group input-group--small">
+                    <label for="expInput">Experience (yrs)</label>
+                    <input id="expInput" type="number" min="0" placeholder="0">
+                </div>
+                <button id="recommendBtn" onclick="getRecommendations()">
+                    <span class="btn-text">Get Recommendations</span>
+                    <span class="btn-loader" style="display:none;">Loading...</span>
+                </button>
+            </div>
+            <div id="recommendError" class="error-msg" style="display:none;"></div>
+            <div id="results"></div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- AI CAREER ADVISOR -->
+        <section class="card" id="advisor-section">
+            <div class="card-header">
+                <h2>AI Career Advisor</h2>
+                <p class="subtitle">Get AI-powered advice on skills, learning path, and common mistakes.</p>
+            </div>
+            <div class="form-row">
+                <div class="input-group">
+                    <label for="roleSelect">Target Role</label>
+                    <select id="roleSelect">
+                        <option value="">Select a role...</option>
+                        <option>Frontend Developer</option>
+                        <option>Backend Developer</option>
+                        <option>Full Stack Developer</option>
+                        <option>Data Analyst</option>
+                        <option>Data Scientist</option>
+                        <option>ML Engineer</option>
+                        <option>AI Engineer</option>
+                        <option>NLP Engineer</option>
+                        <option>Cloud Engineer</option>
+                        <option>DevOps Engineer</option>
+                        <option>MLOps Engineer</option>
+                        <option value="OTHER">Other (Custom Role)</option>
+                    </select>
+                </div>
+                <button id="askAIBtn" onclick="askAI()">
+                    <span class="btn-text">Ask AI</span>
+                    <span class="btn-loader" style="display:none;">Thinking...</span>
+                </button>
+            </div>
+            <div class="input-group" id="customRoleWrapper" style="display:none; margin-bottom: 16px;">
+                <label for="customRoleInput">Custom Role</label>
+                <input type="text" id="customRoleInput" placeholder="e.g. MLOps Engineer, LLM Engineer">
+            </div>
+            <div id="aiError" class="error-msg" style="display:none;"></div>
+            <pre id="aiResult" class="ai-box" style="display:none;"></pre>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        Built with Django 6 · PostgreSQL · Groq LLM · Dockerized
+        &nbsp;·&nbsp; <a href="/api/metrics" target="_blank" class="footer-link">📊 /api/metrics</a>
+        &nbsp;·&nbsp; <a href="/health/db" target="_blank" class="footer-link">💚 /health/db</a>
+    </footer>
+
+</div>
+
+<script>
+/* =====================
+   LOAD METRICS ON PAGE LOAD
+===================== */
+window.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const res = await fetch("/api/metrics");
+        const data = await res.json();
+        document.getElementById("metricJobs").textContent = `${data.database.jobs_count} jobs`;
+        document.getElementById("metricSkills").textContent = `${data.database.skills_count} skills`;
+        document.getElementById("metricDb").textContent = `DB ${data.database.ping_latency_ms}ms`;
+    } catch (_) {}
+});
+
+/* =====================
+   FILE INPUT LABEL
+===================== */
+document.getElementById("resumeFile").addEventListener("change", function () {
+    document.getElementById("fileLabelText").textContent =
+        this.files.length ? this.files[0].name : "Choose PDF or Word file...";
+});
+
+/* =====================
+   RESUME PARSER
+===================== */
+async function parseResume() {
+    const fileInput = document.getElementById("resumeFile");
+    const errorDiv = document.getElementById("resumeError");
+    const resultDiv = document.getElementById("resumeResult");
+    const btn = document.getElementById("parseBtn");
+
+    errorDiv.style.display = "none";
+    resultDiv.style.display = "none";
+
+    if (!fileInput.files.length) {
+        showError(errorDiv, "Please select a PDF or Word file first.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("resume", fileInput.files[0]);
+    setLoading(btn, true);
+
+    try {
+        const res = await fetch("/parse-resume", { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (data.error) { showError(errorDiv, data.error); return; }
+
+        document.getElementById("skillsInput").value = data.skills_string;
+        document.getElementById("expInput").value = data.experience_years;
+
+        let breakdownHTML = "";
+        if (data.experience_breakdown?.length > 0) {
+            breakdownHTML = `
+                <table class="exp-table">
+                    <thead><tr><th>Company</th><th>From</th><th>To</th><th>Duration</th></tr></thead>
+                    <tbody>
+                        ${data.experience_breakdown.map(e => `
+                            <tr><td>${e.company}</td><td>${e.start}</td><td>${e.end}</td><td>${e.years} yrs</td></tr>
+                        `).join("")}
+                        <tr class="exp-total">
+                            <td colspan="3"><strong>Total Experience</strong></td>
+                            <td><strong>${data.experience_years_exact} yrs</strong></td>
+                        </tr>
+                    </tbody>
+                </table>`;
+        }
+
+        const parseMs = data.meta?.parse_latency_ms ?? "";
+        resultDiv.innerHTML = `
+            <div class="resume-success">
+                <div class="resume-stats">
+                    <div class="resume-stat"><span class="stat-num">${data.skills.length}</span><span class="stat-label">Skills Found</span></div>
+                    <div class="resume-stat"><span class="stat-num">${data.experience_years_exact}</span><span class="stat-label">Years Exp</span></div>
+                    ${parseMs ? `<div class="resume-stat"><span class="stat-num">${parseMs}</span><span class="stat-label">Parse (ms)</span></div>` : ""}
+                </div>
+                <p class="autofill-note">✅ Auto-filled below — review and click <strong>Get Recommendations</strong>.</p>
+                ${breakdownHTML}
+            </div>`;
+        resultDiv.style.display = "block";
+        setTimeout(() => document.getElementById("recommend-section").scrollIntoView({ behavior: "smooth" }), 400);
+    } catch (err) {
+        showError(errorDiv, "Resume parsing failed. Please try again.");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+/* =====================
+   RECOMMEND BY SKILLS
+===================== */
+async function getRecommendations() {
+    const skills = document.getElementById("skillsInput").value.trim();
+    const experience = document.getElementById("expInput").value || 0;
+    const resultsDiv = document.getElementById("results");
+    const errorDiv = document.getElementById("recommendError");
+    const latencyBadge = document.getElementById("latencyBadge");
+    const btn = document.getElementById("recommendBtn");
+
+    resultsDiv.innerHTML = "";
+    errorDiv.style.display = "none";
+    latencyBadge.style.display = "none";
+
+    if (!skills) { showError(errorDiv, "Please enter at least one skill."); return; }
+
+    setLoading(btn, true);
+
+    try {
+        const res = await fetch("/recommend-by-skills", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ skills, experience: Number(experience) })
+        });
+        const data = await res.json();
+        const jobs = data.recommendations || [];
+
+        // Show latency
+        if (data.meta?.query_latency_ms !== undefined) {
+            document.getElementById("latencyMs").textContent = data.meta.query_latency_ms;
+            latencyBadge.style.display = "flex";
+        }
+
+        if (jobs.length === 0) {
+            resultsDiv.innerHTML = `<p class="empty-state">No matching jobs found. Try adding more skills.</p>`;
+            return;
+        }
+
+        resultsDiv.innerHTML = `<p class="results-count">${jobs.length} job${jobs.length > 1 ? "s" : ""} found</p>`;
+
+        jobs.forEach(job => {
+            const pct = Math.round(job.score * 100);
+            const matchedTags = (job.matched_skills || []).map(s =>
+                `<span class="skill-tag matched-tag">✓ ${s}</span>`).join("");
+            const missingTags = (job.missing_skills || []).map(s =>
+                `<span class="skill-tag missing-tag">+ ${s}</span>`).join("");
+
+            const card = document.createElement("div");
+            card.className = "job-card";
+            card.innerHTML = `
+                <div class="job-card-top">
+                    <h3 class="job-title">${job.title}</h3>
+                    <span class="job-exp">${job.min_experience}+ yrs</span>
+                </div>
+                <div class="score-bar-wrap">
+                    <div class="score-bar" style="width: ${pct}%"></div>
+                </div>
+                <div class="score-label">Match: <strong>${pct}%</strong></div>
+                <div class="skill-section">
+                    <div class="skill-group-label">You have</div>
+                    <div class="skill-tags">${matchedTags}</div>
+                </div>
+                ${missingTags ? `
+                <div class="skill-section">
+                    <div class="skill-group-label gap-label">Learn next</div>
+                    <div class="skill-tags">${missingTags}</div>
+                </div>` : ""}
+            `;
+            resultsDiv.appendChild(card);
+        });
+
+    } catch (err) {
+        showError(errorDiv, "Backend not reachable.");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+/* =====================
+   AI CAREER ADVISOR
+===================== */
+document.getElementById("roleSelect").addEventListener("change", function () {
+    const w = document.getElementById("customRoleWrapper");
+    w.style.display = this.value === "OTHER" ? "block" : "none";
+    if (this.value !== "OTHER") document.getElementById("customRoleInput").value = "";
+});
+
+async function askAI() {
+    const role = document.getElementById("roleSelect").value;
+    const customRole = document.getElementById("customRoleInput").value;
+    const output = document.getElementById("aiResult");
+    const errorDiv = document.getElementById("aiError");
+    const btn = document.getElementById("askAIBtn");
+
+    output.style.display = "none";
+    errorDiv.style.display = "none";
+
+    if (!role) { showError(errorDiv, "Please select a role."); return; }
+
+    setLoading(btn, true);
+    try {
+        const res = await fetch("/career-advice", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ role, custom_role: customRole })
+        });
+        const data = await res.json();
+        if (data.advice) {
+            output.innerText = data.advice;
+            output.style.display = "block";
+        } else {
+            showError(errorDiv, data.error || "AI unavailable.");
+        }
+    } catch (err) {
+        showError(errorDiv, "AI service unavailable.");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+/* =====================
+   HELPERS
+===================== */
+function setLoading(btn, loading) {
+    btn.querySelector(".btn-text").style.display = loading ? "none" : "inline";
+    btn.querySelector(".btn-loader").style.display = loading ? "inline" : "none";
+    btn.disabled = loading;
+}
+function showError(el, msg) { el.innerText = msg; el.style.display = "block"; }
+</script>
+
+</body>
+</html>

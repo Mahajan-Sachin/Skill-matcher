@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Sach123
+      POSTGRES_DB: skill_recommender
+    ports:
+      - "5433:5432"   # 5433 on host to avoid conflict with local PG
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: Sach123
+      DB_NAME: skill_recommender
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      DJANGO_SETTINGS_MODULE: config.settings
+    depends_on:
+      - db
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py seed_db &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  postgres_data:
