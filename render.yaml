@@ -7,10 +7,11 @@ services:
     buildCommand: |
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
-      python manage.py migrate
-      python manage.py seed_db
 
-    startCommand: gunicorn config.wsgi:application --workers 2 --timeout 120
+    startCommand: >-
+      python manage.py migrate &&
+      python manage.py seed_db &&
+      gunicorn config.wsgi:application --workers 2 --timeout 120
 
     envVars:
       - key: DJANGO_SETTINGS_MODULE
