@@ -17,8 +17,8 @@ jobs:
           status=$(curl -s -o /dev/null -w "%{http_code}" --retry 3 --retry-delay 10 "$url")
           echo "HTTP status: $status"
           if [ "$status" -ge 200 ] && [ "$status" -lt 400 ]; then
-            echo "✅ Render ping successful"
+            echo "Render ping successful"
           else
-            echo "❌ Render ping failed"
+            echo "Render ping failed"
             exit 1
           fi
