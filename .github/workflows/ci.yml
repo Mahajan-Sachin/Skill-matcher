@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # ── Spin up a real PostgreSQL in CI ──────────────────
     services:
       postgres:
         image: postgres:15-alpine
@@ -26,7 +25,6 @@ jobs:
         ports:
           - 5432:5432
 
-    # ── Environment variables for Django ─────────────────
     env:
       DB_HOST: localhost
       DB_PORT: 5432
