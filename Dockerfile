@@ -1,43 +1,25 @@
-# ─────────────────────────────────────────────
-# Stage 1: Build dependencies
-# ─────────────────────────────────────────────
-FROM python:3.11-slim AS builder
-
-WORKDIR /app
-
-# System deps for psycopg2, pdfplumber, python-docx
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# ─────────────────────────────────────────────
-# Stage 2: Runtime image
-# ─────────────────────────────────────────────
+# Use an official Python image
 FROM python:3.11-slim
 
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
+# Install system packages needed by psycopg2 and pdfplumber
+RUN apt-get update && apt-get install -y gcc libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# Runtime system deps only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Copy source code
+# Copy the rest of the project code
 COPY . .
 
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# Environment settings
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=config.settings
 
+# Expose the port Django runs on
 EXPOSE 8000
 
-# Run the app
+# Start the Django development server
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

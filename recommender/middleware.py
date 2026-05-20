@@ -14,7 +14,7 @@ class LatencyMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        start = time.perf_counter()
+        start = time.perf_counter() #start timer
         response = self.get_response(request)
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
         response["X-Response-Time-ms"] = str(duration_ms)

@@ -34,25 +34,21 @@ SKILLS = [
 
 
 JOB_TEMPLATES = {
-    # ── Backend ──────────────────────────────────────
     "Backend Developer":        ["Python", "MySQL", "Flask", "REST APIs"],
     "Backend Intern":           ["Python", "MySQL", "Flask"],
     "Java Backend Developer":   ["Java", "Spring Boot", "MySQL"],
     "API Developer":            ["Python", "REST APIs", "PostgreSQL"],
     "Node.js Developer":        ["JavaScript", "Node.js", "Express.js", "MongoDB"],
 
-    # ── Frontend / Full Stack ─────────────────────────
     "Frontend Developer":       ["HTML", "CSS", "JavaScript", "React"],
     "Full Stack Developer":     ["Python", "React", "REST APIs", "MySQL"],
     "React Developer":          ["React", "JavaScript", "CSS", "HTML"],
 
-    # ── Data ─────────────────────────────────────────
     "Data Analyst":             ["SQL", "Data Analysis", "Power BI", "Excel"],
     "Data Analyst Intern":      ["SQL", "Data Analysis"],
     "Data Scientist":           ["Python", "Machine Learning", "Pandas", "NumPy", "SQL"],
     "Data Scientist Intern":    ["Python", "Pandas", "Scikit-learn"],
 
-    # ── ML / AI ──────────────────────────────────────
     "ML Engineer":              ["Python", "Machine Learning", "Scikit-learn", "AWS"],
     "ML Intern":                ["Python", "Machine Learning", "Scikit-learn"],
     "Deep Learning Engineer":   ["Python", "Deep Learning", "TensorFlow", "PyTorch"],
@@ -61,18 +57,15 @@ JOB_TEMPLATES = {
     "Computer Vision Engineer": ["Python", "Computer Vision", "OpenCV", "TensorFlow"],
     "LLM Engineer":             ["Python", "LangChain", "Hugging Face", "NLP"],
 
-    # ── Cloud / DevOps ────────────────────────────────
     "Cloud Engineer":           ["AWS", "Docker", "Kubernetes"],
     "DevOps Engineer":          ["AWS", "Docker", "Git", "CI/CD", "Kubernetes"],
     "MLOps Engineer":           ["Python", "Docker", "AWS", "CI/CD", "Machine Learning"],
     "Site Reliability Engineer":["Linux", "Docker", "Kubernetes", "CI/CD", "AWS"],
 
-    # ── Systems / Language-specific ───────────────────
     "Python Developer":         ["Python", "Git", "MySQL"],
     "C++ Developer":            ["C++", "Data Structures", "Algorithms"],
     "Go Developer":             ["Go", "REST APIs", "Docker"],
 
-    # ── Generic Fallback Roles ────────────────────────
     "Software Engineer":        ["Data Structures", "Algorithms", "Git", "OOP"],
     "Systems Engineer":         ["Operating Systems", "Networking", "C++", "Linux"],
 }

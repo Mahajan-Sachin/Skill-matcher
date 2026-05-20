@@ -66,11 +66,5 @@ jobs:
       - name: Seed database
         run: python manage.py seed_db
 
-      - name: Verify DB has data
-        run: |
-          python manage.py shell -c "
-          from recommender.models import Job, Skill
-          assert Skill.objects.count() > 0, 'No skills seeded!'
-          assert Job.objects.count() > 0, 'No jobs seeded!'
-          print(f'✅ DB OK: {Skill.objects.count()} skills, {Job.objects.count()} jobs')
-          "
+      - name: Run tests
+        run: python manage.py test recommender --verbosity=2

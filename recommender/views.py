@@ -6,11 +6,11 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.db import connection
 
 from groq import Groq
 from .services.recommender import get_recommendations_by_skills
 from .services.resume_parser import parse_resume
-from django.db import connection
 
 
 def index(request):
@@ -25,16 +25,14 @@ def recommend_by_skills(request):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON."}, status=400)
 
-    skills_input = data.get("skills", "")
+    user_skills = [s.strip() for s in data.get("skills", "").split(",") if s.strip()]
     experience = int(data.get("experience", 0))
-    user_skills = [s.strip() for s in skills_input.split(",") if s.strip()]
 
     t_start = time.perf_counter()
     try:
         recommendations = get_recommendations_by_skills(user_skills, experience)
     except Exception as e:
         return JsonResponse({"error": "Recommendation service failed.", "details": str(e)}, status=500)
-    query_ms = round((time.perf_counter() - t_start) * 1000, 2)
 
     return JsonResponse({
         "input_skills": user_skills,
@@ -42,7 +40,7 @@ def recommend_by_skills(request):
         "recommendations": recommendations,
         "meta": {
             "jobs_found": len(recommendations),
-            "query_latency_ms": query_ms,
+            "query_latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
         },
     })
 
@@ -66,11 +64,7 @@ def career_advice(request):
     if not groq_key:
         return JsonResponse({"error": "Groq API key not configured."}, status=200)
 
-    client = Groq(api_key=groq_key)
-
-    prompt = f"""You are a career advisor.
-
-Explain for the role: {final_role}
+    prompt = f"""You are a career advisor. Explain for the role: {final_role}
 
 1. Core technical skills required
 2. Nice-to-have skills
@@ -81,16 +75,15 @@ Keep the response concise and structured."""
 
     t_start = time.perf_counter()
     try:
-        response = client.chat.completions.create(
+        response = Groq(api_key=groq_key).chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
             max_tokens=400,
         )
-        llm_ms = round((time.perf_counter() - t_start) * 1000, 2)
         return JsonResponse({
             "advice": response.choices[0].message.content,
-            "meta": {"llm_latency_ms": llm_ms},
+            "meta": {"llm_latency_ms": round((time.perf_counter() - t_start) * 1000, 2)},
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -101,24 +94,18 @@ def db_health(request):
         t_start = time.perf_counter()
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
-        db_ms = round((time.perf_counter() - t_start) * 1000, 2)
         return JsonResponse({
             "status": "success",
             "message": "Database connection successful",
-            "db_latency_ms": db_ms,
+            "db_latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
         })
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
 def metrics(request):
-    """
-    System metrics endpoint — DB latency, model counts, health status.
-    Shows interviewers you understand observability and system monitoring.
-    """
     from recommender.models import Job, Skill
 
-    # DB ping latency
     t_start = time.perf_counter()
     try:
         with connection.cursor() as cursor:
@@ -129,7 +116,6 @@ def metrics(request):
         db_ms = None
         db_status = str(e)
 
-    # Model counts
     try:
         jobs_count = Job.objects.count()
         skills_count = Skill.objects.count()
